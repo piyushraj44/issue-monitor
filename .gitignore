@@ -1,0 +1,9 @@
+# Secrets for local runs. Never commit this.
+.env
+
+# Local state: in the cloud, state lives on the "state" branch instead.
+state.json
+
+.venv/
+__pycache__/
+.DS_Store

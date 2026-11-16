@@ -1,0 +1,19 @@
+# Which public repositories to watch, as "owner/name".
+# Add or remove lines here; the next run picks up the change.
+# A repo you add later starts quietly: it records the newest issue
+# and only alerts on issues opened after that.
+repos:
+  - ollama/ollama     # busy: usually several new issues a day
+  - react/react       # quieter (formerly facebook/react)
+
+# How many of the newest issues to fetch per repo on each run.
+# If more than this many issues were opened between two runs,
+# you get the newest ones plus a "there were more" note.
+issues_per_repo: 20
+
+# Issues that were opened AND closed before the monitor saw them
+# (often spam or instant duplicates). false = skip them silently.
+include_closed: false
+
+# How many characters of the issue description to show in Telegram.
+body_preview_chars: 300

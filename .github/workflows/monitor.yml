@@ -1,0 +1,79 @@
+name: Issue monitor
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # every 5 minutes (GitHub may start it late)
+  workflow_dispatch:         # adds a "Run workflow" button in the Actions tab
+    inputs:
+      test_telegram:
+        description: "Only send a test Telegram message"
+        type: boolean
+        default: false
+
+# Only one run at a time. A new run waits for the current one to finish,
+# so two runs can never send the same issue or overwrite each other's state.
+concurrency:
+  group: issue-monitor
+  cancel-in-progress: false
+
+# The built-in token may only write repo contents (to save state.json).
+permissions:
+  contents: write
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore state from the "state" branch
+        run: |
+          if git fetch --depth=1 origin state 2>/dev/null; then
+            git show FETCH_HEAD:state.json > state.json
+            cp state.json "$RUNNER_TEMP/state.before.json"
+            echo "Restored state.json"
+          else
+            echo "No state branch yet: this is the first run"
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Check for new issues
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ "${{ inputs.test_telegram }}" = "true" ]; then
+            python monitor.py --test-telegram
+          else
+            python monitor.py
+          fi
+
+      # Runs even if the step above failed, so progress made before a
+      # crash is kept and those issues aren't sent again.
+      - name: Save state to the "state" branch
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          [ -f state.json ] || { echo "No state to save"; exit 0; }
+          if cmp -s state.json "$RUNNER_TEMP/state.before.json"; then
+            echo "State unchanged, nothing to save"; exit 0
+          fi
+          # The state branch holds a single commit with just state.json.
+          cd "$RUNNER_TEMP" && rm -rf state-branch && mkdir state-branch && cd state-branch
+          git init -q -b state
+          cp "$GITHUB_WORKSPACE/state.json" .
+          git add state.json
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -q -m "Update monitor state"
+          git push -q -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" state
+          echo "State saved"
