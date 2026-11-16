@@ -31,6 +31,7 @@ GITHUB_TOKEN=...        # e.g. the output of: gh auth token
 .venv/bin/python monitor.py --dry-run        # print what would be sent, change nothing
 .venv/bin/python monitor.py --test-telegram  # send one test message
 .venv/bin/python monitor.py --backfill 2     # first run, but also send the last 2 issues per repo
+.venv/bin/python monitor.py --heartbeat      # also send the daily check-in now
 .venv/bin/python -m unittest discover -s tests -v
 ```
 
@@ -38,6 +39,10 @@ GITHUB_TOKEN=...        # e.g. the output of: gh auth token
 
 Repository → Settings → Secrets and variables → Actions → add
 `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`. `GITHUB_TOKEN` is provided automatically.
-The Actions tab has a **Run workflow** button for manual runs and test messages.
+The Actions tab has a **Run workflow** button with three modes: `check` (a normal run),
+`test-telegram` (send a test message) and `heartbeat-now` (a normal run plus the daily check-in).
+
+A daily check-in message (see `heartbeat` in config.yaml) confirms the monitor is alive.
+If it stops arriving, look at the Actions tab.
 
 The repo must be public for unlimited free Actions minutes.

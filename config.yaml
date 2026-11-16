@@ -17,3 +17,11 @@ include_closed: false
 
 # How many characters of the issue description to show in Telegram.
 body_preview_chars: 300
+
+# A short "still alive" message once a day, sent on the first run at or
+# after `hour` in `timezone`. If it stops arriving, the monitor has stopped.
+# timezone examples: UTC, Asia/Kolkata, Europe/London, America/New_York
+heartbeat:
+  enabled: true
+  hour: 9
+  timezone: UTC

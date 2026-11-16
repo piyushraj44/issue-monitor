@@ -3,6 +3,7 @@
 Run with:  python -m unittest discover -s tests -v
 """
 import sys
+import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
@@ -135,6 +136,58 @@ class Query(unittest.TestCase):
         self.assertIn('r0: repository(owner: "a", name: "b")', q)
         self.assertIn('r1: repository(owner: "c", name: "d")', q)
         self.assertIn("issues(first: 20", q)
+
+
+class Phase2(unittest.TestCase):
+    def test_duplicate_repos_in_config_are_watched_once(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "config.yaml"
+            path.write_text("repos:\n  - acme/shop\n  - Acme/Shop\n  - acme/blog\n")
+            with self.assertLogs("monitor", "WARNING"):
+                config = monitor.load_config(path)
+        self.assertEqual(config["repos"], ["acme/shop", "acme/blog"])
+        self.assertEqual(config["heartbeat"], {"enabled": True, "hour": 9, "timezone": "UTC"})
+
+    def test_removed_repo_is_forgotten(self):
+        h = Harness({"repos": {"acme/shop": {"last_seen": 5}, "acme/old": {"last_seen": 9}}})
+        h.run({"acme/shop": [issue(5)]})
+        self.assertNotIn("acme/old", h.state["repos"])
+
+    def test_alerts_are_counted_for_the_heartbeat(self):
+        h = Harness({"repos": {"acme/shop": {"last_seen": 10}}, "alerts_since_heartbeat": 3})
+        h.run({"acme/shop": [issue(11), issue(12)]})
+        self.assertEqual(h.state["alerts_since_heartbeat"], 5)
+
+    def test_large_repo_lists_are_fetched_in_batches(self):
+        batches = []
+        original = monitor._fetch_batch
+        monitor._fetch_batch = lambda repos, per_repo, token: batches.append(len(repos)) or {}
+        try:
+            monitor.fetch_recent_issues([f"o/r{i}" for i in range(60)], 20, "token")
+        finally:
+            monitor._fetch_batch = original
+        self.assertEqual(batches, [25, 25, 10])
+
+
+class Heartbeat(unittest.TestCase):
+    MORNING = datetime(2026, 11, 17, 9, 30, tzinfo=timezone.utc)
+
+    def test_due_after_the_hour_once_per_day(self):
+        self.assertTrue(monitor.heartbeat_due({}, self.MORNING, hour=9))
+        self.assertFalse(monitor.heartbeat_due({}, self.MORNING, hour=10))
+        self.assertFalse(monitor.heartbeat_due({"last_heartbeat": "2026-11-17"}, self.MORNING, 9))
+        self.assertTrue(monitor.heartbeat_due({"last_heartbeat": "2026-11-16"}, self.MORNING, 9))
+
+    def test_message_with_stats_and_missing_repo(self):
+        text = monitor.format_heartbeat(50, 7, {"runs": 230, "failed": 2}, ["acme/gone"])
+        self.assertIn("Watching 50 repos · 7 alert(s)", text)
+        self.assertIn("230 runs, 2 failed", text)
+        self.assertIn("Can't read: acme/gone", text)
+
+    def test_message_without_stats(self):
+        text = monitor.format_heartbeat(2, 0, None, [])
+        self.assertIn("Run stats unavailable", text)
+        self.assertNotIn("Can't read", text)
 
 
 if __name__ == "__main__":

@@ -18,15 +18,17 @@ import logging
 import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable
+from zoneinfo import ZoneInfo
 
 import requests
 import yaml
 
 GITHUB_GRAPHQL_URL = "https://api.github.com/graphql"
 TELEGRAM_SEND_URL = "https://api.telegram.org/bot{token}/sendMessage"
+BATCH_SIZE = 25  # repos per GitHub request
 
 log = logging.getLogger("monitor")
 
@@ -37,12 +39,24 @@ log = logging.getLogger("monitor")
 
 def load_config(path: Path) -> dict:
     config = yaml.safe_load(path.read_text())
+    seen, repos = set(), []
     for repo in config["repos"]:
         if repo.count("/") != 1:
             raise ValueError(f"Repo must look like owner/name, got: {repo!r}")
+        if repo.lower() in seen:  # GitHub names are case-insensitive
+            log.warning("%s is listed twice in config.yaml; watching it once", repo)
+            continue
+        seen.add(repo.lower())
+        repos.append(repo)
+    config["repos"] = repos
     config.setdefault("issues_per_repo", 20)
     config.setdefault("include_closed", False)
     config.setdefault("body_preview_chars", 300)
+    heartbeat = config.get("heartbeat") or {}
+    heartbeat.setdefault("enabled", True)
+    heartbeat.setdefault("hour", 9)
+    heartbeat.setdefault("timezone", "UTC")
+    config["heartbeat"] = heartbeat
     return config
 
 
@@ -148,7 +162,17 @@ def build_query(repos: list[str], per_repo: int) -> str:
 
 def fetch_recent_issues(repos: list[str], per_repo: int, token: str) -> dict:
     """Returns {"owner/name": [issue, ...]} or {"owner/name": None} if that repo
-    couldn't be read (renamed, deleted, made private)."""
+    couldn't be read (renamed, deleted, made private).
+
+    Repos are sent in batches of BATCH_SIZE: one huge query for 50 busy repos
+    can time out on GitHub's side, two medium ones don't."""
+    result = {}
+    for start in range(0, len(repos), BATCH_SIZE):
+        result.update(_fetch_batch(repos[start:start + BATCH_SIZE], per_repo, token))
+    return result
+
+
+def _fetch_batch(repos: list[str], per_repo: int, token: str) -> dict:
     resp = request_with_retry(
         "POST", GITHUB_GRAPHQL_URL, label="GitHub",
         headers={"Authorization": f"Bearer {token}"},
@@ -290,6 +314,7 @@ def run_once(config: dict, state: dict, fetched: dict, send: Callable[[str], Non
             else:
                 send(format_issue(repo, issue, config["body_preview_chars"]))
                 sent += 1
+                state["alerts_since_heartbeat"] = state.get("alerts_since_heartbeat", 0) + 1
             # Save after EVERY issue: if the run dies halfway, the next run
             # resumes after the last issue that was actually sent.
             state["repos"][repo]["last_seen"] = issue["number"]
@@ -301,7 +326,64 @@ def run_once(config: dict, state: dict, fetched: dict, send: Callable[[str], Non
                  f"last check; some older ones may not have been sent.\n"
                  f'<a href="https://github.com/{html.escape(repo)}/issues">See all issues →</a>')
         log.info("%s: %d new issue(s)", repo, len(fresh))
+
+    # Forget repos removed from config.yaml. If one is added back later it
+    # starts fresh instead of sending everything opened while it was gone.
+    for repo in list(state["repos"]):
+        if repo not in config["repos"]:
+            del state["repos"][repo]
+            save()
+            log.info("%s: no longer in config.yaml, forgotten", repo)
     return sent
+
+
+# --------------------------------------------------------------------------
+# Daily heartbeat: proof the monitor is still alive
+# --------------------------------------------------------------------------
+
+def heartbeat_due(state: dict, now_local: datetime, hour: int) -> bool:
+    """True once per day: on the first run at or after `hour` (local time)."""
+    return (state.get("last_heartbeat") != now_local.date().isoformat()
+            and now_local.hour >= hour)
+
+
+def fetch_run_stats(token: str, repo: str, since: datetime) -> dict | None:
+    """How often this workflow ran since `since`, and how many runs failed.
+    Uses the Actions API, so it also counts runs that crashed before this
+    script started. Returns None if the numbers can't be fetched."""
+    url = f"https://api.github.com/repos/{repo}/actions/workflows/monitor.yml/runs"
+    created = ">=" + since.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    counts = {}
+    try:
+        for key, extra in (("runs", {}), ("failed", {"status": "failure"})):
+            resp = request_with_retry(
+                "GET", url, label="GitHub run stats",
+                headers={"Authorization": f"Bearer {token}"},
+                params={"created": created, "per_page": 1, **extra})
+            if not resp.ok:
+                log.warning("Run stats unavailable: HTTP %s", resp.status_code)
+                return None
+            counts[key] = resp.json()["total_count"]  # no need to page through runs
+    except RuntimeError as exc:
+        log.warning("Run stats unavailable: %s", exc)
+        return None
+    return counts
+
+
+def format_heartbeat(repo_count: int, alerts: int, stats: dict | None,
+                     missing: list[str]) -> str:
+    lines = ["💓 <b>Issue monitor: daily check-in</b>",
+             f"Watching {repo_count} repos · {alerts} alert(s) since the last check-in"]
+    if stats:
+        lines.append(f"Last 24 h: {stats['runs']} runs, {stats['failed']} failed "
+                     f"(every 5 min would be 288; GitHub skips some)")
+    else:
+        lines.append("Run stats unavailable")
+    if missing:
+        lines.append("⚠️ Can't read: " + ", ".join(html.escape(r) for r in missing))
+    lines += ["", "<i>No check-in tomorrow means the monitor has stopped. "
+                  "Look at the repo's Actions tab.</i>"]
+    return "\n".join(lines)
 
 
 def main() -> int:
@@ -314,6 +396,8 @@ def main() -> int:
                         help="send one test message and exit")
     parser.add_argument("--backfill", type=int, default=0, metavar="N",
                         help="for repos seen for the first time, also send their last N issues")
+    parser.add_argument("--heartbeat", action="store_true",
+                        help="send the daily check-in now, whatever the time")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -333,12 +417,28 @@ def main() -> int:
 
     config = load_config(args.config)
     state = load_state(args.state)
-    fetched = fetch_recent_issues(config["repos"], config["issues_per_repo"],
-                                  require_env("GITHUB_TOKEN"))
+    token = require_env("GITHUB_TOKEN")
+    fetched = fetch_recent_issues(config["repos"], config["issues_per_repo"], token)
     save = (lambda: None) if args.dry_run else (lambda: save_state(args.state, state))
 
     sent = run_once(config, state, fetched, send, save, backfill=args.backfill)
     log.info("Done: %d alert(s) %s", sent, "printed (dry run)" if args.dry_run else "sent")
+
+    heartbeat = config["heartbeat"]
+    now_local = datetime.now(ZoneInfo(heartbeat["timezone"]))
+    if args.heartbeat or (heartbeat["enabled"]
+                          and heartbeat_due(state, now_local, heartbeat["hour"])):
+        # GITHUB_REPOSITORY ("owner/name") is set automatically inside Actions.
+        repo_slug = os.environ.get("GITHUB_REPOSITORY")
+        stats = (fetch_run_stats(token, repo_slug, now_local - timedelta(days=1))
+                 if repo_slug else None)
+        missing = [repo for repo in config["repos"] if fetched.get(repo) is None]
+        send(format_heartbeat(len(config["repos"]), state.get("alerts_since_heartbeat", 0),
+                              stats, missing))
+        state["last_heartbeat"] = now_local.date().isoformat()
+        state["alerts_since_heartbeat"] = 0
+        save()
+        log.info("Daily check-in sent")
     return 0
 
 

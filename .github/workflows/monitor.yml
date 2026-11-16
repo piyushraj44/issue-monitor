@@ -5,10 +5,14 @@ on:
     - cron: "*/5 * * * *"   # every 5 minutes (GitHub may start it late)
   workflow_dispatch:         # adds a "Run workflow" button in the Actions tab
     inputs:
-      test_telegram:
-        description: "Only send a test Telegram message"
-        type: boolean
-        default: false
+      mode:
+        description: "What to do"
+        type: choice
+        options:
+          - check             # normal run, same as the schedule
+          - test-telegram     # only send a test message
+          - heartbeat-now     # normal run + send the daily check-in now
+        default: check
 
 # Only one run at a time. A new run waits for the current one to finish,
 # so two runs can never send the same issue or overwrite each other's state.
@@ -16,9 +20,11 @@ concurrency:
   group: issue-monitor
   cancel-in-progress: false
 
-# The built-in token may only write repo contents (to save state.json).
+# The built-in token may only write repo contents (to save state.json)
+# and read this repo's Actions runs (for the daily check-in's run count).
 permissions:
   contents: write
+  actions: read
 
 jobs:
   monitor:
@@ -49,12 +55,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          MODE: ${{ inputs.mode }}   # empty for scheduled runs
         run: |
-          if [ "${{ inputs.test_telegram }}" = "true" ]; then
-            python monitor.py --test-telegram
-          else
-            python monitor.py
-          fi
+          case "$MODE" in
+            test-telegram) python monitor.py --test-telegram ;;
+            heartbeat-now) python monitor.py --heartbeat ;;
+            *)             python monitor.py ;;
+          esac
 
       # Runs even if the step above failed, so progress made before a
       # crash is kept and those issues aren't sent again.
