@@ -10,6 +10,8 @@ Sends a Telegram message when a new issue is opened in any repo listed in
 | `config.yaml` | Repos to watch and a few settings. Edit this to add/remove repos. |
 | `monitor.py` | The whole program: fetch issues, decide what's new, send to Telegram. |
 | `.github/workflows/monitor.yml` | Tells GitHub Actions to run `monitor.py` every 5 minutes. |
+| `discovery.py` | Phase 3: finds similar issues in "neighbour" repos and sends a digest. |
+| `.github/workflows/discovery.yml` | Runs `discovery.py` twice an hour. State lives on the `discovery-state` branch. |
 | `tests/test_monitor.py` | Tests with fake data (no tokens needed). |
 | `state.json` | Created at runtime: newest issue number seen per repo. Lives on the `state` branch in the cloud. |
 
@@ -32,6 +34,7 @@ GITHUB_TOKEN=...        # e.g. the output of: gh auth token
 .venv/bin/python monitor.py --test-telegram  # send one test message
 .venv/bin/python monitor.py --backfill 2     # first run, but also send the last 2 issues per repo
 .venv/bin/python monitor.py --heartbeat      # also send the daily check-in now
+.venv/bin/python discovery.py --dry-run --backfill 20 --show-scores   # see what discovery would match, with scores
 .venv/bin/python -m unittest discover -s tests -v
 ```
 

@@ -25,3 +25,16 @@ heartbeat:
   enabled: true
   hour: 9
   timezone: UTC
+
+# Phase 3: find similar issues in OTHER repos ("neighbours": popular repos
+# sharing at least 2 GitHub topics with a watched repo, re-found weekly).
+# Matches arrive as one digest message every 30 minutes, only when there are any.
+discovery:
+  enabled: true
+  neighbors_per_repo: 8     # neighbour repos per watched repo
+  min_stars: 50
+  extra_repos: []           # always scan these too, e.g. [ggml-org/llama.cpp]
+  exclude_repos: []         # never scan these
+  possible: 0.15            # minimum score to be sent at all
+  strong: 0.25              # score for a "Strong match" label
+  max_per_digest: 5

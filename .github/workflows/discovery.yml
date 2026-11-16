@@ -1,0 +1,78 @@
+name: Similar-issue discovery
+
+on:
+  schedule:
+    - cron: "7,37 * * * *"   # twice an hour, off the busy :00 slot
+  workflow_dispatch:
+    inputs:
+      refresh_neighbors:
+        description: "Search for neighbour repos now (normally weekly)"
+        type: boolean
+        default: false
+
+# One discovery run at a time. Separate group from the issue monitor, so the
+# two never wait on each other.
+concurrency:
+  group: discovery
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # save discovery_state.json to the "discovery-state" branch
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15     # the weekly neighbour search pauses between searches
+    steps:
+      - uses: actions/checkout@v4
+
+      # Its own branch: the monitor's "state" branch is rewritten on every
+      # save, so sharing it would make the two workflows erase each other.
+      - name: Restore state from the "discovery-state" branch
+        run: |
+          if git fetch --depth=1 origin discovery-state 2>/dev/null; then
+            git show FETCH_HEAD:discovery_state.json > discovery_state.json
+            cp discovery_state.json "$RUNNER_TEMP/state.before.json"
+            echo "Restored discovery_state.json"
+          else
+            echo "No discovery-state branch yet: this is the first run"
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Look for similar issues
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          REFRESH: ${{ inputs.refresh_neighbors }}   # empty for scheduled runs
+        run: |
+          if [ "$REFRESH" = "true" ]; then
+            python discovery.py --refresh-neighbors
+          else
+            python discovery.py
+          fi
+
+      - name: Save state to the "discovery-state" branch
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          [ -f discovery_state.json ] || { echo "No state to save"; exit 0; }
+          if cmp -s discovery_state.json "$RUNNER_TEMP/state.before.json"; then
+            echo "State unchanged, nothing to save"; exit 0
+          fi
+          cd "$RUNNER_TEMP" && rm -rf state-branch && mkdir state-branch && cd state-branch
+          git init -q -b discovery-state
+          cp "$GITHUB_WORKSPACE/discovery_state.json" .
+          git add discovery_state.json
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -q -m "Update discovery state"
+          git push -q -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" discovery-state
+          echo "State saved"
