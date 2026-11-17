@@ -166,7 +166,7 @@ class Phase2(unittest.TestCase):
             monitor.fetch_recent_issues([f"o/r{i}" for i in range(60)], 20, "token")
         finally:
             monitor._fetch_batch = original
-        self.assertEqual(batches, [25, 25, 10])
+        self.assertEqual(batches, [15, 15, 15, 15])
 
 
 class Heartbeat(unittest.TestCase):

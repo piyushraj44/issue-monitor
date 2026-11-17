@@ -3,13 +3,55 @@
 # A repo you add later starts quietly: it records the newest issue
 # and only alerts on issues opened after that.
 repos:
-  - ollama/ollama     # busy: usually several new issues a day
-  - react/react       # quieter (formerly facebook/react)
+  # ML / deep learning (GSoC/ESoC 2026)
+  - deepchem/deepchem
+  - openvinotoolkit/openvino        # ~160 issues/month (noisy)
+  - sktime/sktime
+  - sktime/pytorch-forecasting
+  - pgmpy/pgmpy
+  - shap/shap
+  - pymc-devs/pymc
+  - arviz-devs/arviz                # NumFOCUS
+  - weecology/DeepForest            # NumFOCUS
+  - AOSSIE-Org/PictoPy              # AOSSIE
+  - apache/mahout                   # Apache
+  # Science-informed ML
+  - SciML/ModelingToolkit.jl
+  - sbi-dev/sbi
+  - mllam/neural-lam
+  - ML4SCI/DeepLense
+  - ML4SCI/DeepLense-AI-Scientist   # ML4SCI
+  - root-project/root               # CERN-HSF
+  - vgvassilev/clad                 # CERN-HSF
+  - predictive-clinical-neuroscience/PCNtoolkit   # INCF
+  - jonescompneurolab/hnn-core      # INCF
+  # MLOps
+  - kubeflow/pipelines              # ~100/month
+  - kubeflow/trainer
+  - Netflix/metaflow
+  # Cloud
+  - kubevirt/kubevirt
+  - dapr/dapr
+  - jenkinsci/jenkins
+  # Web / full stack
+  - zulip/zulip
+  - wagtail/wagtail
+  - OWASP/Nest
+  - OWASP/OpenCRE                   # OWASP
+  # Big companies
+  - jax-ml/jax
+  - keras-team/keras
+  - NVIDIA/physicsnemo
+  - NVIDIA-NeMo/Speech
+  - openai/openai-agents-python
+  - openai/openai-python
+  - microsoft/onnxruntime           # ~130/month (noisy)
+  - huggingface/transformers        # ~240/month (noisy)
 
 # How many of the newest issues to fetch per repo on each run.
 # If more than this many issues were opened between two runs,
 # you get the newest ones plus a "there were more" note.
-issues_per_repo: 20
+issues_per_repo: 10
 
 # Issues that were opened AND closed before the monitor saw them
 # (often spam or instant duplicates). false = skip them silently.
@@ -33,7 +75,14 @@ discovery:
   enabled: true
   neighbors_per_repo: 8     # neighbour repos per watched repo
   min_stars: 50
-  extra_repos: []           # always scan these too, e.g. [ggml-org/llama.cpp]
+  # Always scan these too. Hand-picked for watched repos that have no useful
+  # GitHub topics, so the automatic neighbour search finds nothing for them.
+  extra_repos:
+    - NVIDIA/earth2studio         # ML weather, for mllam/neural-lam
+    - ecmwf/anemoi-core           # ML weather, for mllam/neural-lam
+    - torchgeo/torchgeo           # geospatial deep learning, for weecology/DeepForest
+    - PyAutoLabs/PyAutoLens       # gravitational lensing, for ML4SCI/DeepLense*
+    - lenstronomy/lenstronomy     # gravitational lensing, for ML4SCI/DeepLense*
   exclude_repos: []         # never scan these
   possible: 0.15            # minimum score to be sent at all
   strong: 0.25              # score for a "Strong match" label

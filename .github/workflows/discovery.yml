@@ -22,7 +22,7 @@ permissions:
 jobs:
   discover:
     runs-on: ubuntu-latest
-    timeout-minutes: 15     # the weekly neighbour search pauses between searches
+    timeout-minutes: 30     # the weekly neighbour search takes ~10 min for 38 repos
     steps:
       - uses: actions/checkout@v4
 

@@ -34,7 +34,7 @@ log = logging.getLogger("discovery")
 
 SEARCH_REPOS_URL = "https://api.github.com/search/repositories"
 SEARCH_PAUSE_SECONDS = 2.5  # repo search allows 30 requests/minute
-PROFILE_BATCH = 10          # READMEs are big, so fewer repos per request
+PROFILE_BATCH = 5           # READMEs + 30 issues each are big; 10 per request hit GitHub's 502 timeout
 MIN_WORDS = 8               # ignore issues with fewer meaningful words than this
 MIN_SHARED_TERMS = 3        # a match needs at least this many words in common
 
@@ -68,6 +68,7 @@ working new one two after before here how why who its it's i'm i've we our out
 same see seen yes because way still even http https www com github github.com
 none null true false info log logs output code example run running ran try tried
 kind type what's let let's sure think know really able each every many much
+review reviewed reviewer reviews comment comments ups follow pull request merged
 """.split())
 
 WORD = re.compile(r"[a-z][a-z0-9]{2,}")
@@ -172,14 +173,19 @@ def find_neighbors(repo: str, topics: list[str], skip: set[str], token: str,
     topic list GitHub returns for each result. Sharing just one broad topic
     like "javascript" says little, so when we have 2+ topics, a neighbour
     must share at least 2."""
+    topics = [t for t in topics if not is_meta_topic(t)]
     if not topics:
-        log.warning("%s has no topics on GitHub: no neighbours found. "
+        log.warning("%s has no (useful) topics on GitHub: no neighbours found. "
                     "Add some manually under discovery.extra_repos.", repo)
         return []
+    # Search the specific topics first ("physics-ml" before "deep-learning"):
+    # broad ones mostly return the biggest generic repos and tutorials.
+    topics = sorted(topics, key=lambda t: t.lower() in BROAD_TOPICS)
     ours = {t.lower() for t in topics}
+    specific = ours - BROAD_TOPICS
     need = 2 if len(ours) >= 2 else 1
     since = (date.today() - timedelta(days=90)).isoformat()
-    shared, stars = {}, {}
+    shared, focus, stars = {}, {}, {}
     for topic in topics[:3]:
         resp = monitor.request_with_retry(
             "GET", SEARCH_REPOS_URL, label="GitHub repo search",
@@ -191,12 +197,52 @@ def find_neighbors(repo: str, topics: list[str], skip: set[str], token: str,
             continue
         for item in resp.json().get("items", []):
             name = item["full_name"]
-            overlap = len(ours & {t.lower() for t in item.get("topics", [])})
-            if name.lower() not in skip and not item.get("fork") and overlap >= need:
-                shared[name] = overlap
-                stars[name] = item["stargazers_count"]
+            theirs = {t.lower() for t in item.get("topics", [])}
+            overlap = len(ours & theirs)
+            if (name.lower() in skip or item.get("fork") or overlap < need
+                    or is_list_repo(name, theirs)
+                    or (specific and not specific & theirs)):  # "python" alone isn't enough
+                continue
+            shared[name] = overlap
+            # Sharing 2 topics with a repo that has 4 says more than sharing
+            # 2 with one tagged with 20 (some repos tag themselves with everything).
+            focus[name] = overlap / len(theirs)
+            stars[name] = item["stargazers_count"]
         time.sleep(SEARCH_PAUSE_SECONDS)
-    return sorted(shared, key=lambda n: (-shared[n], -stars[n]))[:limit]
+    return sorted(shared, key=lambda n: (-shared[n], -focus[n], -stars[n]))[:limit]
+
+
+# Topics that describe a project's community, not what it does: searching
+# "gsoc" finds GSoC *list* repos, not similar software.
+META_TOPICS = {
+    "gsoc", "google-summer-of-code", "hacktoberfest", "good-first-issue",
+    "beginner-friendly", "first-timers-only", "open-source", "opensource", "help-wanted",
+}
+
+
+def is_meta_topic(topic: str) -> bool:
+    t = topic.lower()  # also catches year variants like "gsoc-2026", "hacktoberfest2025"
+    return t in META_TOPICS or t.startswith(("gsoc", "hacktoberfest", "google-summer-of-code"))
+# Topics so broad that sharing only these says little about the problem space.
+BROAD_TOPICS = {
+    "python", "python3", "javascript", "typescript", "java", "go", "golang", "rust",
+    "cpp", "c", "julia", "r", "kotlin", "dart", "ruby", "php", "scala",
+    "machine-learning", "deep-learning", "ai", "artificial-intelligence", "ml",
+    "data-science", "neural-network", "neural-networks", "pytorch", "tensorflow",
+    "llm", "llms", "nlp", "computer-vision", "gpu", "cuda", "docker", "kubernetes",
+    "cloud", "devops", "web", "frontend", "backend", "api", "framework", "library",
+}
+# Curated lists, tutorials and courses: lots of stars, no comparable issues.
+LIST_TOPICS = {"awesome", "awesome-list", "list", "lists", "tutorial", "tutorials",
+               "course", "courses", "book", "books", "roadmap", "interview",
+               "cheatsheet", "learning-resources", "resources", "education"}
+LIST_NAME_WORDS = ("awesome", "best-of", "for-beginners", "from-scratch", "tutorial",
+                   "project-based", "30-days", "roadmap", "interview", "-course", "cheatsheet")
+
+
+def is_list_repo(full_name: str, topics: set[str]) -> bool:
+    name = full_name.split("/")[1].lower()
+    return bool(topics & LIST_TOPICS) or any(w in name for w in LIST_NAME_WORDS)
 
 
 def neighbors_stale(state: dict, watched: list[str], today: date) -> bool:

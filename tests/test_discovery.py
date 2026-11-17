@@ -118,6 +118,25 @@ class Neighbours(unittest.TestCase):
                                              {"acme/shop"}, "token", limit=8, min_stars=50)
         self.assertEqual(found, ["best/store", "good/store"])  # 3 shared topics first
 
+    def test_lists_tutorials_and_meta_topics_are_ignored(self):
+        items = [
+            {"full_name": "x/awesome-shops", "topics": ["ecommerce", "cart"], "stargazers_count": 9000},
+            {"full_name": "x/shop-course", "topics": ["ecommerce", "cart", "tutorial"], "stargazers_count": 9000},
+            {"full_name": "x/gsoc-orgs", "topics": ["gsoc", "hacktoberfest"], "stargazers_count": 9000},
+            {"full_name": "tagged/everything", "topics": ["ecommerce", "cart"] + [f"t{i}" for i in range(18)],
+             "stargazers_count": 9000},
+            {"full_name": "focused/store", "topics": ["ecommerce", "cart"], "stargazers_count": 10},
+        ]
+        fake = mock.Mock(ok=True)
+        fake.json.return_value = {"items": items}
+        with mock.patch.object(discovery.monitor, "request_with_retry", return_value=fake) as call, \
+             mock.patch.object(discovery.time, "sleep"):
+            found = discovery.find_neighbors("acme/shop", ["gsoc", "ecommerce", "cart"],
+                                             set(), "token", limit=8, min_stars=50)
+        self.assertEqual(found, ["focused/store", "tagged/everything"])  # focused one first
+        searched = [c.kwargs["params"]["q"] for c in call.call_args_list]
+        self.assertFalse(any("topic:gsoc" in q for q in searched))
+
 
 class RunDiscovery(unittest.TestCase):
     def setUp(self):

@@ -28,7 +28,7 @@ import yaml
 
 GITHUB_GRAPHQL_URL = "https://api.github.com/graphql"
 TELEGRAM_SEND_URL = "https://api.telegram.org/bot{token}/sendMessage"
-BATCH_SIZE = 25  # repos per GitHub request
+BATCH_SIZE = 15  # repos per GitHub request; bigger batches hit GitHub's ~10 s limit (502)
 
 log = logging.getLogger("monitor")
 
