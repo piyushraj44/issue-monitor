@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       refresh_neighbors:
-        description: "Search for neighbour repos now (normally weekly)"
+        description: "Re-search the next batch of neighbour repos now (normally each repo weekly)"
         type: boolean
         default: false
 
@@ -22,7 +22,10 @@ permissions:
 jobs:
   discover:
     runs-on: ubuntu-latest
-    timeout-minutes: 30     # the weekly neighbour search takes ~10 min for 38 repos
+    # Normally a few minutes: each run re-searches neighbours for only 12
+    # watched repos. The slow case is a run that has to load every watched
+    # repo's profile (a new issue in one of the extra_repos), ~5 repos/request.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 

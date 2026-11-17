@@ -92,15 +92,72 @@ class Digest(unittest.TestCase):
         self.assertIn("shared terms cart, localstorage", text)
 
 
+class NeighbourRefresh(unittest.TestCase):
+    """Which watched repos get their neighbours re-searched in one run."""
+    TODAY = date(2026, 11, 17)
+
+    def pick(self, checked, watched, limit=12, force=False):
+        return discovery.repos_to_refresh({"neighbors_checked": checked}, watched,
+                                          self.TODAY, limit, force)
+
+    def test_never_searched_repos_come_first_in_config_order(self):
+        checked = {"a/old": "2026-11-01"}
+        self.assertEqual(self.pick(checked, ["a/old", "a/new1", "a/new2"]),
+                         ["a/new1", "a/new2", "a/old"])
+
+    def test_only_week_old_repos_are_due_oldest_first(self):
+        checked = {"a/6days": "2026-11-11", "a/7days": "2026-11-10", "a/20days": "2026-10-28"}
+        self.assertEqual(self.pick(checked, list(checked)), ["a/20days", "a/7days"])
+
+    def test_limit_caps_the_batch_and_the_rest_wait_for_later_runs(self):
+        watched = [f"a/r{i}" for i in range(200)]
+        self.assertEqual(self.pick({}, watched), watched[:12])
+        self.assertEqual(self.pick({r: "2026-11-17" for r in watched[:12]}, watched),
+                         watched[12:24])
+
+    def test_nothing_to_do_when_everything_is_fresh(self):
+        self.assertEqual(self.pick({"a/x": "2026-11-16"}, ["a/x"]), [])
+
+    def test_force_takes_the_oldest_regardless_of_age(self):
+        checked = {"a/yesterday": "2026-11-16", "a/today": "2026-11-17"}
+        self.assertEqual(self.pick(checked, list(checked), limit=1, force=True), ["a/yesterday"])
+
+    def test_removed_repos_are_dropped_from_state(self):
+        state = {"neighbors": {"a/keep": ["n/1"], "a/gone": ["n/2"]},
+                 "neighbors_checked": {"a/keep": "2026-11-16", "a/gone": "2026-11-16"}}
+        discovery.tidy_neighbor_state(state, ["a/keep"])
+        self.assertEqual(state["neighbors"], {"a/keep": ["n/1"]})
+        self.assertEqual(state["neighbors_checked"], {"a/keep": "2026-11-16"})
+
+    def test_old_state_with_one_date_is_migrated(self):
+        state = {"neighbors": {"a/x": ["n/1"], "a/y": []}, "neighbors_refreshed": "2026-11-12"}
+        discovery.tidy_neighbor_state(state, ["a/x", "a/y", "a/added"])
+        self.assertNotIn("neighbors_refreshed", state)
+        self.assertEqual(state["neighbors_checked"], {"a/x": "2026-11-12", "a/y": "2026-11-12"})
+        # Only the newly added repo needs a search now; the others aren't a week old.
+        self.assertEqual(discovery.repos_to_refresh(state, ["a/x", "a/y", "a/added"],
+                                                    self.TODAY, 12), ["a/added"])
+
+    def test_empty_state_gets_the_keys_it_needs(self):
+        state = {}
+        discovery.tidy_neighbor_state(state, ["a/x"])
+        self.assertEqual(state, {"neighbors": {}, "neighbors_checked": {}})
+
+
 class Neighbours(unittest.TestCase):
-    def test_refresh_when_missing_changed_or_week_old(self):
-        today = date(2026, 11, 17)
-        fresh = {"neighbors": {"acme/shop": []}, "neighbors_refreshed": "2026-11-14"}
-        self.assertTrue(discovery.neighbors_stale({}, ["acme/shop"], today))
-        self.assertFalse(discovery.neighbors_stale(fresh, ["acme/shop"], today))
-        self.assertTrue(discovery.neighbors_stale(fresh, ["acme/shop", "acme/blog"], today))
-        old = {**fresh, "neighbors_refreshed": "2026-11-09"}
-        self.assertTrue(discovery.neighbors_stale(old, ["acme/shop"], today))
+    def test_fetch_topics_asks_for_topics_only_in_batches_of_25(self):
+        fake = mock.Mock(ok=True)
+        fake.json.return_value = {"data": {
+            "r0": {"repositoryTopics": {"nodes": [{"topic": {"name": "cart"}}]}},
+            "r1": None, "rateLimit": {"cost": 1}}}
+        with mock.patch.object(discovery.monitor, "request_with_retry", return_value=fake) as call:
+            topics = discovery.fetch_topics([f"o/r{i}" for i in range(30)], "token")
+        self.assertEqual(call.call_count, 2)
+        self.assertEqual(topics["o/r0"], ["cart"])
+        self.assertNotIn("o/r1", topics)  # unreadable repo is left out
+        query = call.call_args_list[0].kwargs["json"]["query"]
+        self.assertNotIn("readme", query)
+        self.assertNotIn("issues", query)
 
     def test_neighbours_must_share_two_topics_and_skip_forks_and_watched(self):
         items = [
@@ -141,12 +198,17 @@ class Neighbours(unittest.TestCase):
 class RunDiscovery(unittest.TestCase):
     def setUp(self):
         self.sent = []
+        self.profile_requests = []  # each call to get_profiles: the repos it asked for
         self.state = {"neighbors": {"acme/shop": ["other/store"]}, "seen": {"other/store": 6}}
 
-    def run_it(self, issues, send=None):
-        return discovery.run_discovery(CONFIG, DCFG, self.state, SHOP_PROFILE,
-                                       {"other/store": issues}, send or self.sent.append,
-                                       lambda: None)
+    def get_profiles(self, repos):
+        self.profile_requests.append(repos)
+        return {r: SHOP_PROFILE["acme/shop"] for r in repos}
+
+    def run_it(self, issues, send=None, config=CONFIG, dcfg=DCFG, fetched=None):
+        return discovery.run_discovery(config, dcfg, self.state,
+                                       fetched or {"other/store": issues}, self.get_profiles,
+                                       send or self.sent.append, lambda: None)
 
     def test_new_matching_issue_is_sent_once(self):
         self.run_it([CART_BUG, DARK_MODE])
@@ -180,6 +242,65 @@ class RunDiscovery(unittest.TestCase):
         self.state["seen"]["gone/repo"] = 3
         self.run_it([])
         self.assertNotIn("gone/repo", self.state["seen"])
+
+    # --- profiles are loaded only when, and for whom, they are needed -------
+
+    def test_no_new_issues_means_no_profiles_are_loaded(self):
+        self.state["seen"]["other/store"] = 8  # everything already seen
+        self.run_it([CART_BUG, DARK_MODE])
+        self.assertEqual(self.profile_requests, [])
+
+    def test_new_neighbour_baseline_loads_no_profiles(self):
+        self.state["seen"] = {}
+        self.run_it([CART_BUG])
+        self.assertEqual(self.profile_requests, [])
+
+    def test_bot_closed_and_too_short_issues_load_no_profiles(self):
+        bot = {**CART_BUG, "author": {"login": "dependabot"}}
+        closed = {**DARK_MODE, "state": "CLOSED"}
+        self.run_it([bot, closed, issue(9, "cart bug")])
+        self.assertEqual(self.profile_requests, [])
+        self.assertEqual(self.state["seen"]["other/store"], 9)
+
+    def test_profiles_loaded_only_for_watched_repos_with_a_new_issue(self):
+        config = {"repos": ["acme/shop", "acme/blog", "acme/docs"]}
+        self.state = {"neighbors": {"acme/shop": ["other/store"], "acme/blog": ["other/cms"],
+                                    "acme/docs": ["other/cms"]},
+                      "seen": {"other/store": 6, "other/cms": 20}}
+        self.run_it(None, config=config,
+                    fetched={"other/store": [CART_BUG], "other/cms": [issue(20, "Old one")]})
+        self.assertEqual(self.profile_requests, [["acme/shop"]])
+        self.assertEqual(len(self.sent), 1)
+
+    def test_neighbour_shared_by_two_watched_repos_loads_both(self):
+        config = {"repos": ["acme/shop", "acme/blog"]}
+        self.state = {"neighbors": {"acme/shop": ["other/store"], "acme/blog": ["other/store"]},
+                      "seen": {"other/store": 6}}
+        self.run_it([CART_BUG], config=config)
+        self.assertEqual(self.profile_requests, [["acme/blog", "acme/shop"]])
+
+    def test_extra_repo_issue_is_compared_with_every_watched_repo(self):
+        config = {"repos": ["acme/shop", "acme/blog"]}
+        dcfg = {**DCFG, "extra_repos": ["extra/repo"]}
+        self.state = {"neighbors": {"acme/shop": ["other/store"], "acme/blog": []},
+                      "seen": {"other/store": 6, "extra/repo": 6}}
+        # Nothing new in the extra repo: only the related watched repo is loaded.
+        self.run_it(None, config=config, dcfg=dcfg,
+                    fetched={"other/store": [CART_BUG], "extra/repo": []})
+        self.assertEqual(self.profile_requests, [["acme/shop"]])
+        # A new issue in the extra repo: every watched repo is loaded.
+        self.run_it(None, config=config, dcfg=dcfg,
+                    fetched={"other/store": [CART_BUG], "extra/repo": [{**CART_BUG, "number": 9}]})
+        self.assertEqual(self.profile_requests[-1], ["acme/blog", "acme/shop"])
+
+    def test_failed_profile_load_keeps_watermark_for_retry(self):
+        def broken(_):
+            raise RuntimeError("GitHub 502")
+        with self.assertRaises(RuntimeError):
+            discovery.run_discovery(CONFIG, DCFG, self.state, {"other/store": [CART_BUG]},
+                                    broken, self.sent.append, lambda: None)
+        self.assertEqual(self.sent, [])
+        self.assertEqual(self.state["seen"]["other/store"], 6)
 
 
 if __name__ == "__main__":

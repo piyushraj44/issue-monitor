@@ -3,50 +3,211 @@
 # A repo you add later starts quietly: it records the newest issue
 # and only alerts on issues opened after that.
 repos:
-  # ML / deep learning (GSoC/ESoC 2026)
+  # ML / deep learning
   - deepchem/deepchem
-  - openvinotoolkit/openvino        # ~160 issues/month (noisy)
+  - openvinotoolkit/openvino
   - sktime/sktime
   - sktime/pytorch-forecasting
   - pgmpy/pgmpy
   - shap/shap
   - pymc-devs/pymc
-  - arviz-devs/arviz                # NumFOCUS
-  - weecology/DeepForest            # NumFOCUS
-  - AOSSIE-Org/PictoPy              # AOSSIE
-  - apache/mahout                   # Apache
+  - arviz-devs/arviz
+  - weecology/DeepForest
+  - AOSSIE-Org/PictoPy
+  - apache/mahout
+  - jax-ml/jax
+  - keras-team/keras
+  - NVIDIA-NeMo/Speech
+  - openai/openai-agents-python
+  - openai/openai-python
+  - microsoft/onnxruntime
+  - huggingface/transformers
+  - AOSSIE-Org/OpenVerifiableLLM   # GSoC
+  - apache/tvm   # GSoC, ~116/month
+  - c2siorg/imagelab   # GSoC
+  - fossasia/visdom   # GSoC
+  - fossasia/voxbento   # GSoC, ~160/month
+  - google-gemini/gemini-cli   # GSoC, ~159/month
+  - holoviz/holoviews   # GSoC
+  - kornia/kornia   # GSoC, ~195/month
+  - kornia/kornia-rs   # GSoC
+  - open-edge-platform/geti   # GSoC
+  - openml/openml-python   # ESoC
+  - openvinotoolkit/nncf   # GSoC
+  - openvinotoolkit/openvino.genai   # GSoC
+  - pymc-devs/pytensor   # GSoC
+  - skrub-data/skrub   # ESoC
+  - anthropics/anthropic-sdk-python   # Anthropic
+  - facebookresearch/faiss   # Meta
+  - google-ai-edge/mediapipe   # Google
+  - google/adk-python   # Google, ~228/month
+  - huggingface/datasets   # Hugging Face
+  - huggingface/diffusers   # Hugging Face
+  - huggingface/lerobot   # Hugging Face
+  - huggingface/peft   # Hugging Face
+  - huggingface/smolagents   # Hugging Face
+  - huggingface/transformers.js   # Hugging Face
+  - huggingface/trl   # Hugging Face, ~204/month
+  - microsoft/agent-framework   # Microsoft, ~315/month
+  - microsoft/autogen   # Microsoft
+  - microsoft/semantic-kernel   # Microsoft
+  - ml-explore/mlx   # Apple
+  - modelcontextprotocol/python-sdk   # Anthropic
+  - modelcontextprotocol/typescript-sdk   # Anthropic
+  - NVIDIA/cudf   # NVIDIA, ~171/month
+  - NVIDIA/TensorRT-LLM   # NVIDIA, ~134/month
+  - openai/openai-agents-js   # OpenAI
+  - openai/openai-node   # OpenAI
+  - pytorch/vision   # Meta
+  - tensorflow/tensorflow   # Google
+  - ggml-org/llama.cpp   # ~392/month
+  - langchain-ai/langchain   # ~175/month
+  - ollama/ollama   # ~190/month
+  - scikit-learn/scikit-learn
   # Science-informed ML
   - SciML/ModelingToolkit.jl
   - sbi-dev/sbi
   - mllam/neural-lam
   - ML4SCI/DeepLense
-  - ML4SCI/DeepLense-AI-Scientist   # ML4SCI
-  - root-project/root               # CERN-HSF
-  - vgvassilev/clad                 # CERN-HSF
-  - predictive-clinical-neuroscience/PCNtoolkit   # INCF
-  - jonescompneurolab/hnn-core      # INCF
+  - ML4SCI/DeepLense-AI-Scientist
+  - root-project/root
+  - vgvassilev/clad
+  - predictive-clinical-neuroscience/PCNtoolkit
+  - jonescompneurolab/hnn-core
+  - NVIDIA/physicsnemo
+  - aiidateam/aiida-core   # GSoC
+  - astropy/astropy   # GSoC
+  - brian-team/brian2   # GSoC
+  - dipy/dipy   # GSoC
+  - fury-gl/fury   # GSoC
+  - gammapy/gammapy   # GSoC
+  - JuliaGPU/AMDGPU.jl   # GSoC
+  - JuliaGPU/CUDA.jl   # GSoC
+  - JuliaGPU/GPUArrays.jl   # GSoC
+  - JuliaGPU/KernelAbstractions.jl   # GSoC
+  - matplotlib/matplotlib   # GSoC
+  - MDAnalysis/mdanalysis   # GSoC
+  - mne-tools/mne-python   # GSoC
+  - OpenMS/OpenMS   # GSoC
+  - OSGeo/grass   # GSoC
+  - pvlib/pvlib-python   # GSoC
+  - qutip/qutip   # GSoC
+  - sagemath/sage   # GSoC
+  - scikit-bio/scikit-bio   # GSoC
+  - SciML/OrdinaryDiffEq.jl   # GSoC
+  - su2code/SU2   # GSoC
+  - sunpy/sunpy   # GSoC
+  - sympy/sympy   # GSoC
+  - TuringLang/Turing.jl   # GSoC
+  - google-deepmind/mujoco   # Google
+  - isaac-sim/IsaacLab   # NVIDIA
+  - NVIDIA/earth2studio   # NVIDIA
+  - NVIDIA/warp   # NVIDIA, ~177/month
+  - mesa/mesa
+  - scipy/scipy
   # MLOps
-  - kubeflow/pipelines              # ~100/month
+  - kubeflow/pipelines
   - kubeflow/trainer
   - Netflix/metaflow
+  - apache/airflow   # GSoC, ~180/month
+  - apache/beam   # GSoC, ~136/month
+  - conda/rattler   # ESoC
+  - dbpedia/databus-python-client   # GSoC
+  - kubeflow/docs-agent   # GSoC
+  - kubeflow/hub   # GSoC
+  - kubeflow/kale   # GSoC
+  - kubeflow/katib   # GSoC
+  - kubeflow/sdk   # GSoC
+  - kubeflow/spark-operator   # GSoC
+  - openvinotoolkit/model_server   # GSoC
+  - prefix-dev/pixi   # ESoC
+  - prefix-dev/rattler-build   # ESoC
+  - probabl-ai/skore   # ESoC
+  - aws/sagemaker-python-sdk   # AWS
+  - huggingface/optimum   # Hugging Face
+  - NVIDIA/gpu-operator   # NVIDIA
+  - triton-inference-server/server   # NVIDIA
+  - langfuse/langfuse   # ~128/month
+  - mlflow/mlflow   # ~191/month
+  - PrefectHQ/prefect   # ~114/month
+  - ray-project/ray   # ~126/month
   # Cloud
   - kubevirt/kubevirt
   - dapr/dapr
   - jenkinsci/jenkins
+  - aces/cbrain   # GSoC
+  - agentgateway/agentgateway   # GSoC
+  - apache/airavata   # GSoC
+  - apache/cloudstack   # GSoC
+  - apache/fluss   # GSoC, ~283/month
+  - apache/hugegraph   # GSoC
+  - apache/iceberg   # GSoC
+  - apache/incubator-seata-go   # GSoC
+  - apache/skywalking   # GSoC
+  - apache/wayang   # GSoC
+  - ceph/ceph-csi   # GSoC
+  - checkpoint-restore/criu   # GSoC
+  - debezium/dbz   # GSoC, ~213/month
+  - hermetoproject/hermeto   # GSoC
+  - kgateway-dev/kgateway   # GSoC
+  - konflux-ci/konflux-ci   # GSoC
+  - kptdev/kpt   # GSoC
+  - metacall/core   # GSoC
+  - unikraft/unikraft   # GSoC
+  - uyuni-project/uyuni   # GSoC
+  - aws/aws-cdk   # AWS
+  - awslabs/mcp   # AWS
+  - cloudflare/workers-sdk   # Cloudflare, ~129/month
+  - gvisor/gvisor   # Google, ~106/month
+  - hashicorp/terraform   # HashiCorp
+  - kubernetes/kubernetes   # Google/CNCF, ~174/month
+  - kubernetes/minikube   # Google/CNCF
+  - backstage/backstage   # ~198/month
+  - envoyproxy/envoy
+  - etcd-io/etcd
+  - istio/istio
+  - prometheus/prometheus
   # Web / full stack
   - zulip/zulip
   - wagtail/wagtail
   - OWASP/Nest
-  - OWASP/OpenCRE                   # OWASP
-  # Big companies
-  - jax-ml/jax
-  - keras-team/keras
-  - NVIDIA/physicsnemo
-  - NVIDIA-NeMo/Speech
-  - openai/openai-agents-python
-  - openai/openai-python
-  - microsoft/onnxruntime           # ~130/month (noisy)
-  - huggingface/transformers        # ~240/month (noisy)
+  - OWASP/OpenCRE
+  - apache/superset   # GSoC, ~101/month
+  - boa-dev/boa   # GSoC
+  - eclipse-theia/theia   # GSoC
+  - fossasia/eventyay   # GSoC, ~145/month
+  - fossasia/eventyay-exhibition   # GSoC
+  - GraphiteEditor/Graphite   # GSoC
+  - holoviz/panel   # GSoC
+  - intelowlproject/IntelOwl   # GSoC
+  - internetarchive/openlibrary   # GSoC, ~143/month
+  - jitsi/jitsi-meet   # GSoC
+  - joomla/joomla-cms   # GSoC
+  - laurent22/joplin   # GSoC
+  - learning-unlimited/ESP-Website   # GSoC
+  - learningequality/kolibri   # GSoC, ~176/month
+  - learningequality/studio   # GSoC
+  - maplibre/martin   # GSoC
+  - neutralinojs/neutralinojs   # GSoC
+  - openstreetmap/iD   # GSoC
+  - oppia/oppia   # GSoC, ~130/month
+  - osm-search/Nominatim   # GSoC
+  - owtf/owtf   # GSoC
+  - processing/p5.js   # GSoC
+  - processing/p5.js-web-editor   # GSoC
+  - RocketChat/Rocket.Chat   # GSoC
+  - stdlib-js/stdlib   # GSoC
+  - webpack/webpack   # GSoC
+  - angular/angular   # Google
+  - meta/docusaurus   # Meta
+  - meta/lexical   # Meta, ~177/month
+  - microsoft/playwright   # Microsoft, ~284/month
+  - react/react   # Meta
+  - vercel/ai   # Vercel, ~217/month
+  - vercel/next.js   # Vercel, ~164/month
+  - excalidraw/excalidraw
+  - immich-app/immich   # ~182/month
+  - supabase/supabase   # ~109/month
 
 # How many of the newest issues to fetch per repo on each run.
 # If more than this many issues were opened between two runs,

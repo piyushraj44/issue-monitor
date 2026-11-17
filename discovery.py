@@ -2,11 +2,13 @@
 """GitHub issue monitor, Phase 3: similar-issue discovery.
 
 Each run:
-  1. builds a profile of every watched repo (description, topics, README,
-     its 30 newest issues),
-  2. once a week, finds "neighbour" repos: popular repos sharing those topics,
-  3. fetches new issues from the neighbours (one GraphQL call per 25 repos),
-  4. scores each new issue against the watched repo's issues and profile,
+  1. re-searches the "neighbour" repos (popular repos sharing a watched repo's
+     topics) for a few watched repos, so each one is refreshed about weekly
+     without any single run taking long,
+  2. fetches new issues from all neighbours (one GraphQL call per 15 repos),
+  3. only if there are new issues: builds a profile (description, topics,
+     README, 30 newest issues) of just the watched repos they relate to,
+  4. scores each new issue against those repos' issues and profiles,
   5. sends ONE Telegram digest with the best matches and why they matched.
 
 Scoring is plain TF-IDF word matching: free, instant, no model to download,
@@ -35,12 +37,15 @@ log = logging.getLogger("discovery")
 SEARCH_REPOS_URL = "https://api.github.com/search/repositories"
 SEARCH_PAUSE_SECONDS = 2.5  # repo search allows 30 requests/minute
 PROFILE_BATCH = 5           # READMEs + 30 issues each are big; 10 per request hit GitHub's 502 timeout
+TOPICS_BATCH = 25           # topics alone are tiny
+REFRESH_DAYS = 7            # re-search a watched repo's neighbours this often
 MIN_WORDS = 8               # ignore issues with fewer meaningful words than this
 MIN_SHARED_TERMS = 3        # a match needs at least this many words in common
 
 DEFAULTS = {
     "enabled": True,
     "neighbors_per_repo": 8,   # neighbour repos found per watched repo
+    "refresh_per_run": 12,     # watched repos whose neighbours are re-searched per run (~8 s each)
     "min_stars": 50,           # ignore tiny or abandoned repos
     "issues_per_neighbor": 10,
     "extra_repos": [],         # always scan these too
@@ -133,7 +138,42 @@ def build_profile_query(repos: list[str]) -> str:
             "    nodes { number title url bodyText }\n"
             "  }\n"
             "}")
-    return "query {\n" + "\n".join(blocks) + "\n}"
+    return "query {\n" + "\n".join(blocks) + "\nrateLimit { cost }\n}"
+
+
+def build_topics_query(repos: list[str]) -> str:
+    blocks = []
+    for i, full_name in enumerate(repos):
+        owner, name = full_name.split("/")
+        blocks.append(
+            f"r{i}: repository(owner: {json.dumps(owner)}, name: {json.dumps(name)}) "
+            "{ repositoryTopics(first: 10) { nodes { topic { name } } } }")
+    return "query {\n" + "\n".join(blocks) + "\nrateLimit { cost }\n}"
+
+
+def _graphql(query: str, token: str, label: str) -> dict:
+    resp = monitor.request_with_retry(
+        "POST", monitor.GITHUB_GRAPHQL_URL, label=label,
+        headers={"Authorization": f"Bearer {token}"}, json={"query": query})
+    if not resp.ok:
+        raise RuntimeError(f"GitHub returned HTTP {resp.status_code}: {resp.text[:200]}")
+    data = resp.json().get("data") or {}
+    log.info("%s query cost %s point(s)", label, (data.get("rateLimit") or {}).get("cost"))
+    return data
+
+
+def fetch_topics(repos: list[str], token: str) -> dict[str, list[str]]:
+    """{"owner/name": [topic, ...]}: all the neighbour search needs, so it
+    doesn't pay for full profiles. Repos that can't be read are left out."""
+    topics = {}
+    for start in range(0, len(repos), TOPICS_BATCH):
+        batch = repos[start:start + TOPICS_BATCH]
+        data = _graphql(build_topics_query(batch), token, "GitHub topics")
+        for i, full_name in enumerate(batch):
+            if data.get(f"r{i}"):
+                topics[full_name] = [n["topic"]["name"]
+                                     for n in data[f"r{i}"]["repositoryTopics"]["nodes"]]
+    return topics
 
 
 def fetch_profiles(repos: list[str], token: str) -> dict:
@@ -142,13 +182,7 @@ def fetch_profiles(repos: list[str], token: str) -> dict:
     profiles = {}
     for start in range(0, len(repos), PROFILE_BATCH):
         batch = repos[start:start + PROFILE_BATCH]
-        resp = monitor.request_with_retry(
-            "POST", monitor.GITHUB_GRAPHQL_URL, label="GitHub profiles",
-            headers={"Authorization": f"Bearer {token}"},
-            json={"query": build_profile_query(batch)})
-        if not resp.ok:
-            raise RuntimeError(f"GitHub returned HTTP {resp.status_code}: {resp.text[:200]}")
-        data = resp.json().get("data") or {}
+        data = _graphql(build_profile_query(batch), token, "GitHub profiles")
         for i, full_name in enumerate(batch):
             repo = data.get(f"r{i}")
             if not repo:
@@ -245,12 +279,33 @@ def is_list_repo(full_name: str, topics: set[str]) -> bool:
     return bool(topics & LIST_TOPICS) or any(w in name for w in LIST_NAME_WORDS)
 
 
-def neighbors_stale(state: dict, watched: list[str], today: date) -> bool:
-    """Re-search neighbours weekly, or straight away if the watch list changed."""
-    refreshed = state.get("neighbors_refreshed")
-    if refreshed is None or sorted(state.get("neighbors", {})) != sorted(watched):
-        return True
-    return (today - date.fromisoformat(refreshed)).days >= 7
+def tidy_neighbor_state(state: dict, watched: list[str]) -> None:
+    """Bring an older state file up to date and forget repos no longer watched."""
+    neighbors = state.setdefault("neighbors", {})
+    checked = state.setdefault("neighbors_checked", {})
+    # Before the search was spread across runs, one date covered every repo.
+    old_date = state.pop("neighbors_refreshed", None)
+    if old_date:
+        for repo in neighbors:
+            checked.setdefault(repo, old_date)
+    for entries in (neighbors, checked):
+        for repo in list(entries):
+            if repo not in watched:
+                del entries[repo]
+
+
+def repos_to_refresh(state: dict, watched: list[str], today: date, limit: int,
+                     force: bool = False) -> list[str]:
+    """The watched repos whose neighbours get re-searched this run: ones never
+    searched first, then ones last searched REFRESH_DAYS or more ago, oldest
+    first. Capped at `limit`, because each repo costs 3 rate-limited searches;
+    200 repos in one run would take about 50 minutes. `force` ignores age."""
+    checked = state.get("neighbors_checked", {})
+    never = [r for r in watched if r not in checked]
+    due = sorted((r for r in watched if r in checked and (
+                      force or (today - date.fromisoformat(checked[r])).days >= REFRESH_DAYS)),
+                 key=lambda r: checked[r])
+    return (never + due)[:limit]
 
 
 # --------------------------------------------------------------------------
@@ -337,12 +392,14 @@ def is_bot(issue: dict) -> bool:
     return login.endswith("[bot]") or login in {"dependabot", "renovate", "github-actions"}
 
 
-def run_discovery(config: dict, dcfg: dict, state: dict, profiles: dict, fetched: dict,
+def run_discovery(config: dict, dcfg: dict, state: dict, fetched: dict,
+                  get_profiles: Callable[[list[str]], dict],
                   send: Callable[[str], None], save: Callable[[], None],
                   backfill: int = 0, show_scores: bool = False) -> int:
     """Pick new issues from neighbour repos, rank them, send one digest,
     THEN advance the watermarks (so a failed send is retried next run).
-    Returns how many matches were sent."""
+    `get_profiles(watched_repos)` is only called for the watched repos that
+    have a new issue to compare against. Returns how many matches were sent."""
     related: dict[str, list[str]] = {}
     for watched, neighbors in state["neighbors"].items():
         for n in neighbors:
@@ -362,10 +419,16 @@ def run_discovery(config: dict, dcfg: dict, state: dict, profiles: dict, fetched
             new_marks[repo] = fresh[-1]["number"]
         candidates += [(repo, i) for i in fresh if i["state"] == "OPEN" and not is_bot(i)]
 
+    # Profiles are the expensive part (README + 30 issues per repo), so load
+    # them only for watched repos that a scoreable new issue relates to.
+    needed = sorted({watched for repo, issue in candidates
+                     if len(tokens(issue_text(issue))) >= MIN_WORDS
+                     for watched in related.get(repo, [])})
+    profiles = get_profiles(needed) if needed else {}
     scored = rank_candidates(candidates, profiles, related, dcfg)
     matches = [m for m in scored if m["tier"]]
-    log.info("%d new issue(s) in neighbour repos, %d above the threshold",
-             len(candidates), len(matches))
+    log.info("%d new issue(s) in neighbour repos, compared with %d watched repo(s), "
+             "%d above the threshold", len(candidates), len(needed), len(matches))
     if show_scores:  # top 15 whatever their score, to help pick thresholds
         for m in scored[:15]:
             log.info("  %.3f %-8s %s #%s %s  [%s]", m["score"], m["tier"] or "-", m["repo"],
@@ -393,7 +456,7 @@ def main() -> int:
     parser.add_argument("--show-scores", action="store_true",
                         help="log every match with its score (for tuning thresholds)")
     parser.add_argument("--refresh-neighbors", action="store_true",
-                        help="search for neighbour repos now instead of weekly")
+                        help="re-search the next batch of neighbours now, even if under a week old")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -415,26 +478,36 @@ def main() -> int:
     state = json.loads(args.state.read_text()) if args.state.exists() else {}
     save = (lambda: None) if args.dry_run else (lambda: monitor.save_state(args.state, state))
 
-    profiles = fetch_profiles(config["repos"], token)
-
-    watched_lower = {r.lower() for r in config["repos"]}
-    skip = watched_lower | {r.lower() for r in dcfg["exclude_repos"]}
-    if args.refresh_neighbors or neighbors_stale(state, config["repos"], date.today()):
-        state["neighbors"] = {
-            repo: find_neighbors(repo, profiles.get(repo, {}).get("topics", []), skip, token,
-                                 dcfg["neighbors_per_repo"], dcfg["min_stars"])
-            for repo in config["repos"]}
-        state["neighbors_refreshed"] = date.today().isoformat()
-        save()
-        for repo, found in state["neighbors"].items():
+    watched = config["repos"]
+    skip = {r.lower() for r in watched} | {r.lower() for r in dcfg["exclude_repos"]}
+    tidy_neighbor_state(state, watched)
+    batch = repos_to_refresh(state, watched, date.today(), dcfg["refresh_per_run"],
+                             force=args.refresh_neighbors)
+    if batch:
+        topics = fetch_topics(batch, token)
+        for repo in batch:
+            if repo in topics:
+                found = find_neighbors(repo, topics[repo], skip, token,
+                                       dcfg["neighbors_per_repo"], dcfg["min_stars"])
+            else:
+                log.warning("%s: can't read its topics (renamed or private?)", repo)
+                found = []
+            state["neighbors"][repo] = found
+            state["neighbors_checked"][repo] = date.today().isoformat()
             log.info("Neighbours of %s: %s", repo, ", ".join(found) or "none")
+        save()
+        waiting = sum(1 for r in watched if r not in state["neighbors_checked"])
+        log.info("Neighbour search: %d repo(s) refreshed this run, %d not searched yet",
+                 len(batch), waiting)
 
     to_scan = sorted({n for ns in state["neighbors"].values() for n in ns}
                      | set(dcfg["extra_repos"]))
     to_scan = [r for r in to_scan if r.lower() not in skip]
+    log.info("Scanning %d neighbour repo(s) for new issues", len(to_scan))
     fetched = monitor.fetch_recent_issues(to_scan, dcfg["issues_per_neighbor"], token)
 
-    sent = run_discovery(config, dcfg, state, profiles, fetched, send, save,
+    sent = run_discovery(config, dcfg, state, fetched,
+                         lambda repos: fetch_profiles(repos, token), send, save,
                          backfill=args.backfill, show_scores=args.show_scores)
     log.info("Done: %d match(es) %s", sent, "printed (dry run)" if args.dry_run else "sent")
     return 0

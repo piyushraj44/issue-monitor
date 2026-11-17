@@ -29,7 +29,9 @@ permissions:
 jobs:
   monitor:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # Normally under a minute. Alerts go out at 1 per second, so the first run
+    # after a long gap with ~200 repos can have 100+ to send.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
