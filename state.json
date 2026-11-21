@@ -1,0 +1,606 @@
+{
+  "alerts_since_heartbeat": 69,
+  "last_heartbeat": "2026-11-21",
+  "repos": {
+    "AOSSIE-Org/OpenVerifiableLLM": {
+      "last_seen": 365
+    },
+    "AOSSIE-Org/PictoPy": {
+      "last_seen": 1754
+    },
+    "GraphiteEditor/Graphite": {
+      "last_seen": 4978
+    },
+    "JuliaGPU/AMDGPU.jl": {
+      "last_seen": 1222
+    },
+    "JuliaGPU/CUDA.jl": {
+      "last_seen": 3618
+    },
+    "JuliaGPU/GPUArrays.jl": {
+      "last_seen": 850
+    },
+    "JuliaGPU/KernelAbstractions.jl": {
+      "last_seen": 988
+    },
+    "MDAnalysis/mdanalysis": {
+      "last_seen": 5555
+    },
+    "ML4SCI/DeepLense": {
+      "last_seen": 259
+    },
+    "ML4SCI/DeepLense-AI-Scientist": {
+      "last_seen": 35
+    },
+    "NVIDIA-NeMo/Speech": {
+      "last_seen": 16609
+    },
+    "NVIDIA/TensorRT-LLM": {
+      "last_seen": 22740
+    },
+    "NVIDIA/cudf": {
+      "last_seen": 25458
+    },
+    "NVIDIA/earth2studio": {
+      "last_seen": 1407
+    },
+    "NVIDIA/gpu-operator": {
+      "last_seen": 3272
+    },
+    "NVIDIA/physicsnemo": {
+      "last_seen": 2304
+    },
+    "NVIDIA/warp": {
+      "last_seen": 2391
+    },
+    "Netflix/metaflow": {
+      "last_seen": 3447
+    },
+    "OSGeo/grass": {
+      "last_seen": 8228
+    },
+    "OWASP/Nest": {
+      "last_seen": 5867
+    },
+    "OWASP/OpenCRE": {
+      "last_seen": 1236
+    },
+    "OpenMS/OpenMS": {
+      "last_seen": 10953
+    },
+    "PrefectHQ/prefect": {
+      "last_seen": 24034
+    },
+    "RocketChat/Rocket.Chat": {
+      "last_seen": 43849
+    },
+    "SciML/ModelingToolkit.jl": {
+      "last_seen": 5427
+    },
+    "SciML/OrdinaryDiffEq.jl": {
+      "last_seen": 5028
+    },
+    "TuringLang/Turing.jl": {
+      "last_seen": 2923
+    },
+    "aces/cbrain": {
+      "last_seen": 1715
+    },
+    "agentgateway/agentgateway": {
+      "last_seen": 4508
+    },
+    "aiidateam/aiida-core": {
+      "last_seen": 7805
+    },
+    "angular/angular": {
+      "last_seen": 72150
+    },
+    "anthropics/anthropic-sdk-python": {
+      "last_seen": 2075
+    },
+    "apache/airavata": {
+      "last_seen": 789
+    },
+    "apache/airflow": {
+      "last_seen": 77436
+    },
+    "apache/beam": {
+      "last_seen": 41548
+    },
+    "apache/cloudstack": {
+      "last_seen": 14729
+    },
+    "apache/fluss": {
+      "last_seen": 5330
+    },
+    "apache/hugegraph": {
+      "last_seen": 3484
+    },
+    "apache/iceberg": {
+      "last_seen": 19075
+    },
+    "apache/incubator-seata-go": {
+      "last_seen": 1230
+    },
+    "apache/mahout": {
+      "last_seen": 1584
+    },
+    "apache/skywalking": {
+      "last_seen": 14249
+    },
+    "apache/superset": {
+      "last_seen": 46426
+    },
+    "apache/tvm": {
+      "last_seen": 20996
+    },
+    "apache/wayang": {
+      "last_seen": 895
+    },
+    "arviz-devs/arviz": {
+      "last_seen": 2635
+    },
+    "astropy/astropy": {
+      "last_seen": 20920
+    },
+    "aws/aws-cdk": {
+      "last_seen": 39864
+    },
+    "aws/sagemaker-python-sdk": {
+      "last_seen": 6577
+    },
+    "awslabs/mcp": {
+      "last_seen": 5163
+    },
+    "backstage/backstage": {
+      "last_seen": 37066
+    },
+    "boa-dev/boa": {
+      "last_seen": 5681
+    },
+    "brian-team/brian2": {
+      "last_seen": 1958
+    },
+    "c2siorg/imagelab": {
+      "last_seen": 536
+    },
+    "ceph/ceph-csi": {
+      "last_seen": 6754
+    },
+    "checkpoint-restore/criu": {
+      "last_seen": 3378
+    },
+    "cloudflare/workers-sdk": {
+      "last_seen": 17104
+    },
+    "conda/rattler": {
+      "last_seen": 3202
+    },
+    "dapr/dapr": {
+      "last_seen": 11214
+    },
+    "dbpedia/databus-python-client": {
+      "last_seen": 110
+    },
+    "debezium/dbz": {
+      "last_seen": 3144
+    },
+    "deepchem/deepchem": {
+      "last_seen": 5289
+    },
+    "dipy/dipy": {
+      "last_seen": 4318
+    },
+    "eclipse-theia/theia": {
+      "last_seen": 18430
+    },
+    "envoyproxy/envoy": {
+      "last_seen": 49517
+    },
+    "etcd-io/etcd": {
+      "last_seen": 22877
+    },
+    "excalidraw/excalidraw": {
+      "last_seen": 12693
+    },
+    "facebookresearch/faiss": {
+      "last_seen": 5971
+    },
+    "fossasia/eventyay": {
+      "last_seen": 7549
+    },
+    "fossasia/eventyay-exhibition": {
+      "last_seen": 426
+    },
+    "fossasia/visdom": {
+      "last_seen": 2114
+    },
+    "fossasia/voxbento": {
+      "last_seen": 1349
+    },
+    "fury-gl/fury": {
+      "last_seen": 1436
+    },
+    "gammapy/gammapy": {
+      "last_seen": 7086
+    },
+    "ggml-org/llama.cpp": {
+      "last_seen": 32739
+    },
+    "google-ai-edge/mediapipe": {
+      "last_seen": 6418
+    },
+    "google-deepmind/mujoco": {
+      "last_seen": 3937
+    },
+    "google-gemini/gemini-cli": {
+      "last_seen": 30394
+    },
+    "google/adk-python": {
+      "last_seen": 8282
+    },
+    "gvisor/gvisor": {
+      "last_seen": 17850
+    },
+    "hashicorp/terraform": {
+      "last_seen": 39572
+    },
+    "hermetoproject/hermeto": {
+      "last_seen": 1842
+    },
+    "holoviz/holoviews": {
+      "last_seen": 7165
+    },
+    "holoviz/panel": {
+      "last_seen": 9131
+    },
+    "huggingface/datasets": {
+      "last_seen": 9114
+    },
+    "huggingface/diffusers": {
+      "last_seen": 15369
+    },
+    "huggingface/lerobot": {
+      "last_seen": 5455
+    },
+    "huggingface/optimum": {
+      "last_seen": 2557
+    },
+    "huggingface/peft": {
+      "last_seen": 4215
+    },
+    "huggingface/smolagents": {
+      "last_seen": 3244
+    },
+    "huggingface/transformers": {
+      "last_seen": 51061
+    },
+    "huggingface/transformers.js": {
+      "last_seen": 1955
+    },
+    "huggingface/trl": {
+      "last_seen": 8506
+    },
+    "immich-app/immich": {
+      "last_seen": 33546
+    },
+    "intelowlproject/IntelOwl": {
+      "last_seen": 4174
+    },
+    "internetarchive/openlibrary": {
+      "last_seen": 14646
+    },
+    "isaac-sim/IsaacLab": {
+      "last_seen": 9140
+    },
+    "istio/istio": {
+      "last_seen": 62928
+    },
+    "jax-ml/jax": {
+      "last_seen": 42806
+    },
+    "jenkinsci/jenkins": {
+      "last_seen": 27829
+    },
+    "jitsi/jitsi-meet": {
+      "last_seen": 18417
+    },
+    "jonescompneurolab/hnn-core": {
+      "last_seen": 1404
+    },
+    "joomla/joomla-cms": {
+      "last_seen": 48889
+    },
+    "keras-team/keras": {
+      "last_seen": 24317
+    },
+    "kgateway-dev/kgateway": {
+      "last_seen": 15067
+    },
+    "konflux-ci/konflux-ci": {
+      "last_seen": 10108
+    },
+    "kornia/kornia": {
+      "last_seen": 6888
+    },
+    "kornia/kornia-rs": {
+      "last_seen": 1383
+    },
+    "kptdev/kpt": {
+      "last_seen": 4887
+    },
+    "kubeflow/docs-agent": {
+      "last_seen": 305
+    },
+    "kubeflow/hub": {
+      "last_seen": 3473
+    },
+    "kubeflow/kale": {
+      "last_seen": 1061
+    },
+    "kubeflow/katib": {
+      "last_seen": 2756
+    },
+    "kubeflow/pipelines": {
+      "last_seen": 15845
+    },
+    "kubeflow/sdk": {
+      "last_seen": 961
+    },
+    "kubeflow/spark-operator": {
+      "last_seen": 3332
+    },
+    "kubeflow/trainer": {
+      "last_seen": 4494
+    },
+    "kubernetes/kubernetes": {
+      "last_seen": 144389
+    },
+    "kubernetes/minikube": {
+      "last_seen": 24098
+    },
+    "kubevirt/kubevirt": {
+      "last_seen": 19999
+    },
+    "langchain-ai/langchain": {
+      "last_seen": 42015
+    },
+    "langfuse/langfuse": {
+      "last_seen": 20642
+    },
+    "laurent22/joplin": {
+      "last_seen": 17157
+    },
+    "learning-unlimited/ESP-Website": {
+      "last_seen": 6304
+    },
+    "learningequality/kolibri": {
+      "last_seen": 15982
+    },
+    "learningequality/studio": {
+      "last_seen": 6462
+    },
+    "maplibre/martin": {
+      "last_seen": 4025
+    },
+    "matplotlib/matplotlib": {
+      "last_seen": 32630
+    },
+    "mesa/mesa": {
+      "last_seen": 4162
+    },
+    "meta/docusaurus": {
+      "last_seen": 13080
+    },
+    "meta/lexical": {
+      "last_seen": 9962
+    },
+    "metacall/core": {
+      "last_seen": 968
+    },
+    "microsoft/agent-framework": {
+      "last_seen": 10415
+    },
+    "microsoft/autogen": {
+      "last_seen": 8498
+    },
+    "microsoft/onnxruntime": {
+      "last_seen": 34349
+    },
+    "microsoft/playwright": {
+      "last_seen": 44279
+    },
+    "microsoft/semantic-kernel": {
+      "last_seen": 14847
+    },
+    "ml-explore/mlx": {
+      "last_seen": 4933
+    },
+    "mlflow/mlflow": {
+      "last_seen": 28000
+    },
+    "mllam/neural-lam": {
+      "last_seen": 895
+    },
+    "mne-tools/mne-python": {
+      "last_seen": 14576
+    },
+    "modelcontextprotocol/python-sdk": {
+      "last_seen": 3891
+    },
+    "modelcontextprotocol/typescript-sdk": {
+      "last_seen": 3219
+    },
+    "neutralinojs/neutralinojs": {
+      "last_seen": 1884
+    },
+    "ollama/ollama": {
+      "last_seen": 19820
+    },
+    "open-edge-platform/geti": {
+      "last_seen": 7975
+    },
+    "openai/openai-agents-js": {
+      "last_seen": 2707
+    },
+    "openai/openai-agents-python": {
+      "last_seen": 6135
+    },
+    "openai/openai-node": {
+      "last_seen": 3176
+    },
+    "openai/openai-python": {
+      "last_seen": 4309
+    },
+    "openml/openml-python": {
+      "last_seen": 1791
+    },
+    "openstreetmap/iD": {
+      "last_seen": 13257
+    },
+    "openvinotoolkit/model_server": {
+      "last_seen": 4773
+    },
+    "openvinotoolkit/nncf": {
+      "last_seen": 4311
+    },
+    "openvinotoolkit/openvino": {
+      "last_seen": 40144
+    },
+    "openvinotoolkit/openvino.genai": {
+      "last_seen": 4987
+    },
+    "oppia/oppia": {
+      "last_seen": 28208
+    },
+    "osm-search/Nominatim": {
+      "last_seen": 4238
+    },
+    "owtf/owtf": {
+      "last_seen": 1503
+    },
+    "pgmpy/pgmpy": {
+      "last_seen": 3738
+    },
+    "predictive-clinical-neuroscience/PCNtoolkit": {
+      "last_seen": 649
+    },
+    "prefix-dev/pixi": {
+      "last_seen": 7585
+    },
+    "prefix-dev/rattler-build": {
+      "last_seen": 2961
+    },
+    "probabl-ai/skore": {
+      "last_seen": 3389
+    },
+    "processing/p5.js": {
+      "last_seen": 9415
+    },
+    "processing/p5.js-web-editor": {
+      "last_seen": 4443
+    },
+    "prometheus/prometheus": {
+      "last_seen": 20524
+    },
+    "pvlib/pvlib-python": {
+      "last_seen": 2953
+    },
+    "pymc-devs/pymc": {
+      "last_seen": 8655
+    },
+    "pymc-devs/pytensor": {
+      "last_seen": 2700
+    },
+    "pytorch/vision": {
+      "last_seen": 9761
+    },
+    "qutip/qutip": {
+      "last_seen": 3106
+    },
+    "ray-project/ray": {
+      "last_seen": 68424
+    },
+    "react/react": {
+      "last_seen": 38335
+    },
+    "root-project/root": {
+      "last_seen": 24283
+    },
+    "sagemath/sage": {
+      "last_seen": 43180
+    },
+    "sbi-dev/sbi": {
+      "last_seen": 2203
+    },
+    "scikit-bio/scikit-bio": {
+      "last_seen": 2681
+    },
+    "scikit-learn/scikit-learn": {
+      "last_seen": 35483
+    },
+    "scipy/scipy": {
+      "last_seen": 26776
+    },
+    "shap/shap": {
+      "last_seen": 5335
+    },
+    "skrub-data/skrub": {
+      "last_seen": 2445
+    },
+    "sktime/pytorch-forecasting": {
+      "last_seen": 2530
+    },
+    "sktime/sktime": {
+      "last_seen": 11899
+    },
+    "stdlib-js/stdlib": {
+      "last_seen": 16737
+    },
+    "su2code/SU2": {
+      "last_seen": 3026
+    },
+    "sunpy/sunpy": {
+      "last_seen": 8922
+    },
+    "supabase/supabase": {
+      "last_seen": 53785
+    },
+    "sympy/sympy": {
+      "last_seen": 31198
+    },
+    "tensorflow/tensorflow": {
+      "last_seen": 130510
+    },
+    "triton-inference-server/server": {
+      "last_seen": 9085
+    },
+    "unikraft/unikraft": {
+      "last_seen": 1984
+    },
+    "uyuni-project/uyuni": {
+      "last_seen": 12968
+    },
+    "vercel/ai": {
+      "last_seen": 25345
+    },
+    "vercel/next.js": {
+      "last_seen": 102174
+    },
+    "vgvassilev/clad": {
+      "last_seen": 2544
+    },
+    "wagtail/wagtail": {
+      "last_seen": 14822
+    },
+    "webpack/webpack": {
+      "last_seen": 23457
+    },
+    "weecology/DeepForest": {
+      "last_seen": 1476
+    },
+    "zulip/zulip": {
+      "last_seen": 40768
+    }
+  }
+}
